@@ -1,3 +1,3 @@
 # Arduino
 
-Useful snippets
+Usefull snippets
