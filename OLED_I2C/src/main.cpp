@@ -4,6 +4,8 @@
 #include <Adafruit_SSD1306.h>
 #include <trident_splash.h>
 
+// On an arduino UNO:       A4(SDA), A5(SCL)
+
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
@@ -15,6 +17,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define SSD1306_NO_SPLASH
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+
   Serial.begin(9600);
 
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -41,4 +45,8 @@ void setup() {
 }
 
 void loop() {
+  digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
+  delay(1000);                      // wait for a second
+  digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
+  delay(1000);                      // wait for a second
 }
