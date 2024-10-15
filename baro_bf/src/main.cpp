@@ -1,8 +1,10 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+// On an arduino UNO: A4(SDA), A5(SCL)
+
 // BME280 default I2C address is 0x76 (0x77 if SDO pin is high)
-#define BME280_ADDRESS 0x76
+#define I2C_ADDRESS 0x76
 
 // BME280 Registers
 #define REG_CHIP_ID 0xD0
@@ -13,19 +15,21 @@
 #define REG_TEMP 0xFA
 #define REG_HUM 0xFD
 
-bool initBME280()
+uint8_t prevRegisters[256];
+
+bool initBaro()
 {
-  Wire.beginTransmission(BME280_ADDRESS);
+  Wire.beginTransmission(I2C_ADDRESS);
   Wire.write(REG_CONTROL_HUM); // Humidity control
   Wire.write(0x01);            // Set oversampling for humidity (x1)
   Wire.endTransmission();
 
-  Wire.beginTransmission(BME280_ADDRESS);
+  Wire.beginTransmission(I2C_ADDRESS);
   Wire.write(REG_CONTROL); // Control register
   Wire.write(0x27);        // Set normal mode, oversampling for temperature and pressure (x1)
   Wire.endTransmission();
 
-  Wire.beginTransmission(BME280_ADDRESS);
+  Wire.beginTransmission(I2C_ADDRESS);
   Wire.write(REG_CONFIG); // Config register
   Wire.write(0xA0);       // Standby time 1000ms, filter off
   Wire.endTransmission();
@@ -33,14 +37,25 @@ bool initBME280()
   return true;
 }
 
-// Helper function to read 16-bit value (big-endian) from a register
-uint16_t read16(uint8_t reg)
+uint8_t read8(uint8_t reg)
 {
-  Wire.beginTransmission(BME280_ADDRESS);
+  Wire.beginTransmission(I2C_ADDRESS);
   Wire.write(reg);
   Wire.endTransmission();
 
-  Wire.requestFrom(BME280_ADDRESS, (uint8_t)2);
+  Wire.requestFrom(I2C_ADDRESS, (uint8_t)1);
+  uint8_t value = Wire.read();
+  return value;
+}
+
+// Helper function to read 16-bit value (big-endian) from a register
+uint16_t read16(uint8_t reg)
+{
+  Wire.beginTransmission(I2C_ADDRESS);
+  Wire.write(reg);
+  Wire.endTransmission();
+
+  Wire.requestFrom(I2C_ADDRESS, (uint8_t)2);
   uint16_t value = (Wire.read() << 8) | Wire.read();
   return value;
 }
@@ -48,11 +63,11 @@ uint16_t read16(uint8_t reg)
 // Helper function to read 24-bit value from a register
 uint32_t read24(uint8_t reg)
 {
-  Wire.beginTransmission(BME280_ADDRESS);
+  Wire.beginTransmission(I2C_ADDRESS);
   Wire.write(reg);
   Wire.endTransmission();
 
-  Wire.requestFrom(BME280_ADDRESS, (uint8_t)3);
+  Wire.requestFrom(I2C_ADDRESS, (uint8_t)3);
   uint32_t value = (Wire.read() << 16) | (Wire.read() << 8) | Wire.read();
   return value;
 }
@@ -96,38 +111,65 @@ void setup()
   Wire.begin();
   Serial.begin(9600);
 
-  if (!initBME280())
+  if (!initBaro())
   {
-    Serial.println("BME280 initialization failed!");
+    Serial.println("Baro initialization failed!");
     while (1)
       ; // halt
   }
 
-  Serial.println("BME280 Initialized");
+  Serial.println("Baro Initialized");
 }
 
-void loop()
+void printDiffRegisters()
 {
+  Serial.println("Diff registers:");
+
+  int i;
+  int value;
+  char hexBuffer[5];
+  for (i = 0; i <= 255; i++) {
+    value = read8((uint8_t) i);
+
+    if (value != prevRegisters[i]) {
+        Serial.print("Register: ");
+        sprintf(hexBuffer, "0x%x", i);
+        Serial.print(hexBuffer);
+        Serial.print(", Value: ");
+        Serial.println(value);
+    }
+
+    prevRegisters[i] = value;
+  }
+}
+
+void printAllRegisters()
+{
+  Serial.println("All non-zero registers:");
+
   int i;
   for (i = 0; i <= 255; i++) {
-    Wire.beginTransmission(BME280_ADDRESS);
+    Wire.beginTransmission(I2C_ADDRESS);
     Wire.write(i);
     Wire.endTransmission();
 
-    Wire.requestFrom(BME280_ADDRESS, (uint8_t)2);
+    Wire.requestFrom(I2C_ADDRESS, (uint8_t)2);
     int value = Wire.read();
 
     if (value > 0) {
         Serial.print("Register: ");
-        char hexBuffer[2];
+        char hexBuffer[5];
         sprintf(hexBuffer, "0x%x", i);
         Serial.print(hexBuffer);
         Serial.print(", Value: ");
         Serial.println(value);
     }
   }
+}
 
-  delay(10000);
+void printValues()
+{
+  Serial.println("Parsed values:");
 
   float chipId = readChipId();
   float temperature = readTemperature();
@@ -148,6 +190,13 @@ void loop()
   Serial.print("Humidity: ");
   Serial.print(humidity);
   Serial.println(" %");
+}
 
-  delay(2000); // Wait for 2 seconds between readings
+void loop()
+{
+  printDiffRegisters();
+  // printAllRegisters();
+  // printValues();
+
+  delay(1000);
 }
