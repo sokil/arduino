@@ -23,8 +23,10 @@ void setup() {
   // Initialize the Serial port for output
   Serial.begin(9600);
 
-  // Set MISO (Master In Slave Out) as OUTPUT
   pinMode(MISO, OUTPUT);
+  pinMode(MOSI, INPUT);
+  pinMode(SS, INPUT);
+  pinMode(SCK, INPUT);
 
   // Initialize SPI in slave mode
   SPCR |= _BV(SPE);
