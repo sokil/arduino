@@ -13,6 +13,7 @@ static void generatorTask(void *param) {
     for (size_t i = 0; i < kArraySize; ++i) {
       g_numbers[i] = random(0, 1000);
       vTaskDelay(pdMS_TO_TICKS(10));
+      Serial.printf("generatorTask\n");
     }
     xSemaphoreGive(g_data_ready);
   }
@@ -25,6 +26,8 @@ static void sumTask(void *param) {
       long sum = 0;
       for (size_t i = 0; i < kArraySize; ++i) {
         sum += g_numbers[i];
+        vTaskDelay(pdMS_TO_TICKS(10));
+        Serial.printf("sumTask\n");
       }
       Serial.printf("Sum of %u numbers: %ld\n", static_cast<unsigned>(kArraySize), sum);
     }
