@@ -76,5 +76,14 @@ void loop() {
     Serial.printf("Length: %d\n", fb->len);
     esp_camera_fb_return(fb);
 
+    Serial.println("Double get:");
+    fb = esp_camera_fb_get();
+
+    Serial.println("Double return:");
+    esp_camera_fb_return(fb);
+    fb = esp_camera_fb_get();
+    esp_camera_fb_return(fb);
+    esp_camera_fb_return(fb);
+
     delay(1000);
 }
